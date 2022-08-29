@@ -1,6 +1,3 @@
 [submodule "Kotserver"]
 	path = Kotserver
 	url = https://github.com/AlbatovK/Kotserver.git
-[submodule "kotserver"]
-	path = kotserver
-	url = https://github.com/AlbatovK/Kotserver.git
