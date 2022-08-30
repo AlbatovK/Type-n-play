@@ -1,5 +1,3 @@
-from typing import List
-
 import pygame
 from pygame import Rect
 from pygame.sprite import Sprite
@@ -13,9 +11,7 @@ class Meteor(Sprite):
         super().__init__()
         rect = Rect(x_pos, y_pos, width, height)
         self.rect = rect
-        self.original = load_image('rocket.png')
-        self.image = pygame.transform.scale(self.original, self.rect.size)
-        self.image = pygame.transform.rotate(self.image, 180.0)
+        self.image = pygame.transform.scale(load_image('meteor.png'), self.rect.size)
         self.velocity = velocity
 
     def intersect(self, obj: Sprite):

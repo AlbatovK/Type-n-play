@@ -17,7 +17,8 @@ def init_api_service(base: str):
 
 @api_operation
 def get_api_request(url, params=None):
-    return requests.get(url, params=params).json()
+    req = requests.get(url, params=params)
+    return req.json()
 
 
 def create_session() -> int:
@@ -34,6 +35,11 @@ def get_last_event(session_id: int):
     return get_api_request(url="session/event/last", params=params)
 
 
+def post_event(session_id: int, event_code):
+    params = {"session_id": session_id, "event_code": event_code}
+    return get_api_request(url="session/event/post", params=params)
+
+
 def get_random_words(count: int):
     params = {'number': count}
-    return requests.get(url='https://random-word-api.herokuapp.com/word', params=params).json()
+    return ' '.join(requests.get(url='https://random-word-api.herokuapp.com/word', params=params).json())
