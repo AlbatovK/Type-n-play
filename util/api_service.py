@@ -40,6 +40,7 @@ def post_event(session_id: int, event_code):
     return get_api_request(url="session/event/post", params=params)
 
 
-def get_random_words(count: int):
+def get_random_words(count: int) -> str:
     params = {'number': count}
-    return ' '.join(requests.get(url='https://random-word-api.herokuapp.com/word', params=params).json())
+    word_list = requests.get(url='https://random-word-api.herokuapp.com/word', params=params).json()
+    return ' '.join(word_list)

@@ -9,11 +9,13 @@ from pygame.font import Font
 from pygame_textinput import pygame_textinput, TextInputManager
 from pygame_widgets.button import ButtonArray, Button
 
+from sprite.bullet import Bullet
 from sprite.meteor import Meteor
 from sprite.rocket import Rocket
 from sprite.typing_engine import TypingEngine
 from util.api_service import enter_session, create_session, get_last_event, post_event
 from util.asset_manager import load_image, load_font, play_sound
+from util.thread import threaded
 
 
 class Color(Enum):
@@ -43,7 +45,8 @@ class GameState(Enum):
     ST_INPUT = 1
     ST_WAIT = 2
     ST_GAME = 3
-    ST_GAME_OVER = 4
+    ST_INTRO = 4
+    ST_GAME_OVER = 5
 
 
 def validate(string: str):
@@ -60,13 +63,15 @@ class GameCycle:
     last_event_id = None
     player = None
     count = None
+    bullets = 0
 
-    small_font: Font = load_font("GangSmallYuxian.ttf", 40)
+    small_font: Font = load_font("GangSmallYuxian.ttf", 35)
     font: Font = load_font("GangSmallYuxian.ttf", 40)
     medium_font: Font = load_font("GangSmallYuxian.ttf", 55)
     title_font: Font = load_font("GangSmallYuxian.ttf", 80)
 
     rocket = Rocket(85, 450, 150, 150, 0)
+    bullet_group = pg.sprite.Group()
     meteors = pg.sprite.Group()
     typing_engine = TypingEngine(320, 0, 400, 640)
 
@@ -90,18 +95,14 @@ class GameCycle:
         def enter_input_state():
             self.cur_state = GameState.ST_INPUT
 
+        @threaded
         def enter_wait_state():
 
-            def enter_threaded():
-                try:
-                    self.session_id = create_session()
-                    self.cur_state = GameState.ST_WAIT
-                    self.player = PlayerEnum.FIRST
-                except Exception as e:
-                    play_sound("error.wav")
-                    print(e)
-
-            Thread(target=enter_threaded).start()
+            try:
+                self.session_id = create_session()
+                self.cur_state, self.player = GameState.ST_WAIT, PlayerEnum.FIRST
+            except Exception:
+                play_sound("error.wav")
 
         def game_exit():
             self.running = False
@@ -121,6 +122,7 @@ class GameCycle:
     def start_game_cycle(self):
         self.running = True
 
+        @threaded
         def event_pool():
             while self.running:
                 if self.cur_state == GameState.ST_GAME:
@@ -132,12 +134,16 @@ class GameCycle:
                         self.last_event_id = event['posId']
 
                         if event['eventCode'] == EventCode.EVT_METSPWN.value:
-                            meteor = Meteor(110, -100, 100, 100, 1)
+                            meteor = Meteor(110, -100, 100, 100, 2)
                             self.meteors.add(meteor)
+
                         elif event['eventCode'] == EventCode.EVT_GMOVER.value:
                             self.running = False
+                        elif event['eventCode'] == EventCode.EVT_METDESTR.value:
+                            bullet = Bullet(150, 450, 20, 50, -5)
+                            self.bullet_group.add(bullet)
 
-                        time.sleep(3)
+                        time.sleep(1)
                     except Exception as e:
                         print(e)
 
@@ -149,22 +155,32 @@ class GameCycle:
                             if event['eventCode'] == EventCode.EVT_START.value:
                                 self.last_event_id = event['posId']
                                 play_sound("alert.wav")
-                                self.cur_state = GameState.ST_GAME
+                                self.cur_state = GameState.ST_INTRO
 
-                                def start_countdown():
-                                    self.count = 0
-                                    while self.count < 120 and self.cur_state == GameState.ST_GAME:
-                                        time.sleep(1)
-                                        self.count += 1
-                                    post_event(self.session_id, EventCode.EVT_GMOVER.value)
+                                @threaded
+                                def intro():
+                                    time.sleep(10)
 
-                                Thread(target=start_countdown, daemon=True).start()
+                                    @threaded
+                                    def start_countdown():
+                                        self.count = 0
+                                        while self.count < 120 and self.cur_state == GameState.ST_GAME:
+                                            time.sleep(1)
+                                            self.count += 1
+                                        try:
+                                            post_event(self.session_id, EventCode.EVT_GMOVER.value)
+                                        except Exception as e1:
+                                            pass
+                                    self.cur_state = GameState.ST_GAME
+                                    start_countdown()
+
+                                intro()
 
                             time.sleep(1)
                         except Exception as e:
                             print(e)
 
-        Thread(target=event_pool, daemon=True).start()
+        event_pool()
 
         while self.running:
             self.process_events()
@@ -201,14 +217,33 @@ class GameCycle:
             id_surface = self.medium_font.render(str(self.session_id), True, Color.WHITE.value, Color.BLACK.value)
             self.screen.blit(id_surface, ((500 - id_size_x) // 2, 300))
 
+        elif self.cur_state == GameState.ST_INTRO:
+            self.screen.fill(Color.BLACK.value)
+
+            if self.player == PlayerEnum.FIRST:
+                text = "You are alien species whose main\ngoal is to stop anything\n" \
+                       "from approaching your home\nplanet. Use your technologies to\npull meteors towards\n" \
+                       "unlucky space explorer\nby executing terminal code."
+            else:
+                text = "You are lonely space explorer that\nwas caught in meteor storm.\nYou must " \
+                       "avoid\nhitting rocks by\ntyping commands in order\nfor your ship to shoot them."
+
+            line_size = self.small_font.size(text.split("\n")[0])[1]
+            y = line_size
+            for line in text.split("\n"):
+                text_surface = self.small_font.render(line, True, Color.WHITE.value, Color.BLACK.value)
+                self.screen.blit(text_surface, (30, y))
+                y += line_size
+
         elif self.cur_state == GameState.ST_GAME:
             self.screen.fill(Color.BLACK.value)
             self.rocket.draw(self.screen)
             self.meteors.draw(self.screen)
-            countdown_x = self.medium_font.size(str(self.count))[0]
-            text_surface = self.medium_font.render(str(self.count), True, Color.WHITE.value, Color.BLACK.value)
-            self.screen.blit(text_surface, (640 - countdown_x, 190))
+            countdown_y = self.small_font.size(str(self.count))[1]
+            text_surface = self.small_font.render(str(self.count), True, Color.WHITE.value, Color.BLACK.value)
+            self.screen.blit(text_surface, (20, 620 - countdown_y))
             self.typing_engine.draw(self.screen, self.small_font, Color.WHITE.value, Color.GRAY.value)
+            self.bullet_group.draw(self.screen)
 
         pg.display.update()
 
@@ -222,6 +257,7 @@ class GameCycle:
         elif self.cur_state == GameState.ST_GAME:
             self.rocket.update(events)
             self.meteors.update()
+            self.bullet_group.update()
             self.typing_engine.update(events)
 
         for event in events:
@@ -255,6 +291,7 @@ class GameCycle:
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_RETURN:
 
+                        @threaded
                         def enter_session_by_id():
                             try:
                                 sid = int(self.textinput.value)
@@ -265,22 +302,29 @@ class GameCycle:
                                 play_sound("error.wav")
                                 print(e)
 
-                        Thread(target=enter_session_by_id).start()
+                        enter_session_by_id()
 
             elif self.cur_state == GameState.ST_GAME:
 
                 if event.type == pg.USEREVENT:
                     self.typing_engine.written = ""
                     self.typing_engine.load_words()
-                    try:
-                        if self.player == PlayerEnum.FIRST:
-                            print(post_event(self.session_id, EventCode.EVT_METSPWN.value))
-                        else:
-                            print(post_event(self.session_id, EventCode.EVT_METDESTR.value))
-                    except Exception:
-                        pass
 
-                for meteor in self.meteors:
+                    @threaded
+                    def post_events():
+                        try:
+                            if self.player == PlayerEnum.FIRST:
+                                print(post_event(self.session_id, EventCode.EVT_METSPWN.value))
+                            else:
+                                print(post_event(self.session_id, EventCode.EVT_METDESTR.value))
+                        except Exception:
+                            pass
+
+                for meteor in self.meteors.sprites():
                     if self.rocket.intersect(meteor):
-                        post_event(self.session_id, EventCode.EVT_GMOVER.value)
-                        break
+                        try:
+                            post_event(self.session_id, EventCode.EVT_GMOVER.value)
+                        except Exception as e:
+                            pass
+
+
