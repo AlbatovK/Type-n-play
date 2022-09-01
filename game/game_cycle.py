@@ -17,12 +17,11 @@ from sprite.rocket import Rocket
 from sprite.typing_engine import TypingEngine
 from util import threaded
 from util.api_service import enter_session, create_session, get_last_event, post_event
-from util.asset_manager import load_image, load_font, play_sound
-from util.text import validate, text_player_one, text_player_two
+from util.asset_manager import load_image, load_font
+from util.text import *
 
 
 class GameCycle:
-
     running = False
     wnd_size, fps = (720, 640), 60
     cur_state = GameState.ST_ENTER
@@ -32,6 +31,7 @@ class GameCycle:
     session_id = None
     last_event_id = None
     player = None
+    won = None
     count = None
     buttons = None
     cur_btn = 0
@@ -41,7 +41,7 @@ class GameCycle:
     medium_font: Font = load_font("GangSmallYuxian.ttf", 55)
     title_font: Font = load_font("GangSmallYuxian.ttf", 80)
 
-    rocket = Rocket(85, 450, 150, 150)
+    rocket = Rocket(110, 450, 100, 150)
     bullet_group = pg.sprite.Group()
     meteors = pg.sprite.Group()
     typing_engine = TypingEngine(320, 0, 400, 640, word_count)
@@ -102,11 +102,16 @@ class GameCycle:
             while self.count > 0 and self.cur_state == GameState.ST_GAME:
                 time.sleep(1)
                 self.count -= 1
+                if self.count < 10:
+                    play_sound("blip.wav")
 
+            if self.count == 0:
+                self.won = PlayerEnum.SECOND
             post_event(self.session_id, EventCode.EVT_GMOVER.value)
 
         time.sleep(self.intro_dlt)
         self.cur_state = GameState.ST_GAME
+        play_sound("blip.wav")
         start_countdown()
 
     def process_event_pool(self):
@@ -129,7 +134,8 @@ class GameCycle:
                     Bullet(x_pos=145, y_pos=500, width=30, height=60, velocity=-5, group=self.bullet_group)
                     play_sound("laser.wav")
                 elif event['eventCode'] == EventCode.EVT_GMOVER.value:
-                    self.running = False
+                    play_sound("blip.wav")
+                    self.cur_state = GameState.ST_GAME_OVER
 
             elif self.cur_state == GameState.ST_WAIT or self.cur_state == GameState.ST_INPUT:
 
@@ -160,6 +166,21 @@ class GameCycle:
         pg.quit()
         sys.exit()
 
+    def render_game_over_state(self):
+        self.screen.fill(Color.BLACK.value)
+        text = ""
+        if self.player == PlayerEnum.FIRST:
+            text = outro_player_one_won if self.won == self.player else outro_player_one_lost
+        elif self.player == PlayerEnum.SECOND:
+            text = outro_player_two_won if self.won == self.player else outro_player_two_lost
+
+        line_size = self.small_font.size(text.split("\n")[0])[1] + 10
+        y = line_size
+        for line in (text.split("\n") + ["Press any button to go to main screen"]):
+            text_surface = self.small_font.render(line, True, Color.WHITE.value, Color.BLACK.value)
+            self.screen.blit(text_surface, (30, y))
+            y += line_size
+
     def render_enter_state(self):
         self.screen.blit(load_image("enter_background.png"), (0, 0))
         self.buttons.draw()
@@ -185,7 +206,7 @@ class GameCycle:
 
     def render_intro_state(self):
         self.screen.fill(Color.BLACK.value)
-        text = text_player_one if self.player == PlayerEnum.FIRST else text_player_two
+        text = intro_player_one if self.player == PlayerEnum.FIRST else intro_player_two
         line_size = self.small_font.size(text.split("\n")[0])[1] + 10
         y = line_size
         for line in text.split("\n"):
@@ -195,13 +216,13 @@ class GameCycle:
 
     def render_game_state(self):
         self.screen.fill(Color.BLACK.value)
+        self.bullet_group.draw(self.screen)
         self.rocket.draw(self.screen)
         self.meteors.draw(self.screen)
         countdown_y = self.small_font.size(str(self.count))[1]
         text_surface = self.small_font.render(str(self.count), True, Color.WHITE.value, Color.BLACK.value)
         self.screen.blit(text_surface, (20, 620 - countdown_y))
         self.typing_engine.draw(self.screen, self.small_font, Color.WHITE.value, Color.GRAY.value)
-        self.bullet_group.draw(self.screen)
 
     def render(self):
         if self.cur_state == GameState.ST_ENTER:
@@ -219,7 +240,26 @@ class GameCycle:
         elif self.cur_state == GameState.ST_GAME:
             self.render_game_state()
 
+        elif self.cur_state == GameState.ST_GAME_OVER:
+            self.render_game_over_state()
+
         pg.display.update()
+
+    def process_game_over_events(self, events):
+
+        for event in events:
+            if event.type == pg.KEYDOWN:
+                self.session_id = None
+                self.player = None
+                self.count = None
+
+                self.bullet_group = pg.sprite.Group()
+                self.cur_state = pg.sprite.Group()
+                self.rocket = Rocket(110, 450, 100, 150)
+                self.typing_engine.load_words()
+
+                self.cur_state = GameState.ST_ENTER
+                play_sound("select.wav")
 
     def process_input_events(self, events):
         self.textinput.update(events)
@@ -262,10 +302,18 @@ class GameCycle:
         delete_b = []
         for meteor in self.meteors.sprites():
             if self.rocket.intersect(meteor):
+                self.won = PlayerEnum.FIRST
                 play_sound("explosion.wav")
                 self.meteors.remove(meteor)
                 self.rocket.blow()
-                post_event(self.session_id, EventCode.EVT_GMOVER.value)
+
+                @threaded.threaded
+                def end_game():
+                    time.sleep(0.5)
+                    post_event(self.session_id, EventCode.EVT_GMOVER.value)
+
+                end_game()
+
             for bullet in self.bullet_group.sprites():
                 if isinstance(bullet, Bullet) and bullet.intersect(meteor):
                     delete_m.append(meteor)
@@ -323,3 +371,5 @@ class GameCycle:
             self.process_input_events(events)
         elif self.cur_state == GameState.ST_GAME:
             self.process_game_events(events)
+        elif self.cur_state == GameState.ST_GAME_OVER:
+            self.process_game_over_events(events)
