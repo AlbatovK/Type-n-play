@@ -22,6 +22,7 @@ from util.text import validate, text_player_one, text_player_two
 
 
 class GameCycle:
+
     running = False
     wnd_size, fps = (720, 640), 60
     cur_state = GameState.ST_ENTER
@@ -97,10 +98,10 @@ class GameCycle:
 
         @threaded.threaded
         def start_countdown():
-            self.count = 0
-            while self.count < 120 and self.cur_state == GameState.ST_GAME:
+            self.count = 120
+            while self.count > 0 and self.cur_state == GameState.ST_GAME:
                 time.sleep(1)
-                self.count += 1
+                self.count -= 1
 
             post_event(self.session_id, EventCode.EVT_GMOVER.value)
 
@@ -261,6 +262,9 @@ class GameCycle:
         delete_b = []
         for meteor in self.meteors.sprites():
             if self.rocket.intersect(meteor):
+                play_sound("explosion.wav")
+                self.meteors.remove(meteor)
+                self.rocket.blow()
                 post_event(self.session_id, EventCode.EVT_GMOVER.value)
             for bullet in self.bullet_group.sprites():
                 if isinstance(bullet, Bullet) and bullet.intersect(meteor):
