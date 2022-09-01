@@ -13,32 +13,35 @@ from util.threaded import threaded
 
 class TypingEngine(pygame.sprite.Sprite):
 
-    def __init__(self, x_pos: int, y_pos: int, width: int, height: int):
+    def __init__(self, x_pos: int, y_pos: int, width: int, height: int, word_count: int):
         super().__init__()
 
         self.rect: Rect = Rect(x_pos, y_pos, width, height)
         self.image: Surface = pygame.transform.scale(load_image("text_back.png"), self.rect.size)
 
+        self.word_count = word_count
         self.words, self.written = "", ""
         self.load_words()
 
     @threaded
     def load_words(self) -> None:
-        self.words = get_random_words(10)
+        self.words = get_random_words(self.word_count)
         self.written = ""
 
     def update(self, events: List[Event]) -> None:
 
         for event in events:
             if event.type == pygame.KEYDOWN:
+
                 if event.unicode == self.words[len(self.written)]:
                     self.written += event.unicode
+
+                    if self.written == self.words:
+                        text_done_event = pygame.event.Event(pygame.USEREVENT)
+                        pygame.event.post(text_done_event)
+                        return
                 else:
                     play_sound("error.wav")
-
-                if self.written == self.words:
-                    text_done_event = pygame.event.Event(pygame.USEREVENT)
-                    pygame.event.post(text_done_event)
 
     def draw(self, screen: Surface, font: Font, color, written_color) -> None:
 
@@ -62,8 +65,7 @@ class TypingEngine(pygame.sprite.Sprite):
                 for word in line:
 
                     word_surface = font.render(word, 0, _color)
-                    word_width, word_height = word_surface.get_size()
-                    word_height += 10
+                    word_width, word_height = word_surface.get_size()[0], 40
 
                     if x + word_width >= max_width:
                         x = pos[0] + offset_x

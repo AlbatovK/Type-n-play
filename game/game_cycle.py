@@ -25,13 +25,14 @@ class GameCycle:
     running = False
     wnd_size, fps = (720, 640), 60
     cur_state = GameState.ST_ENTER
+    word_count = 5
+    intro_dlt = 10
 
     session_id = None
     last_event_id = None
     player = None
     count = None
     buttons = None
-    bullets = 0
     cur_btn = 0
 
     small_font: Font = load_font("GangSmallYuxian.ttf", 35)
@@ -42,7 +43,7 @@ class GameCycle:
     rocket = Rocket(85, 450, 150, 150)
     bullet_group = pg.sprite.Group()
     meteors = pg.sprite.Group()
-    typing_engine = TypingEngine(320, 0, 400, 640)
+    typing_engine = TypingEngine(320, 0, 400, 640, word_count)
 
     textinput = pygame_textinput.TextInputVisualizer(
         font_object=font,
@@ -103,7 +104,7 @@ class GameCycle:
 
             post_event(self.session_id, EventCode.EVT_GMOVER.value)
 
-        time.sleep(10)
+        time.sleep(self.intro_dlt)
         self.cur_state = GameState.ST_GAME
         start_countdown()
 
@@ -122,11 +123,10 @@ class GameCycle:
             if self.cur_state == GameState.ST_GAME:
 
                 if event['eventCode'] == EventCode.EVT_METSPWN.value:
-                    meteor = Meteor(110, -100, 100, 100, 2)
-                    self.meteors.add(meteor)
+                    Meteor(x_pos=110, y_pos=-100, width=100, height=100, velocity=2, group=self.meteors)
                 elif event['eventCode'] == EventCode.EVT_METDESTR.value:
-                    bullet = Bullet(150, 450, 20, 50, -5)
-                    self.bullet_group.add(bullet)
+                    Bullet(x_pos=145, y_pos=500, width=30, height=60, velocity=-5, group=self.bullet_group)
+                    play_sound("laser.wav")
                 elif event['eventCode'] == EventCode.EVT_GMOVER.value:
                     self.running = False
 
@@ -145,7 +145,7 @@ class GameCycle:
 
         self.running = True
 
-        @threaded.cycled_factory(1, self)
+        @threaded.cycled_factory(0.1, self)
         def event_pool():
             self.process_event_pool()
 
@@ -185,7 +185,7 @@ class GameCycle:
     def render_intro_state(self):
         self.screen.fill(Color.BLACK.value)
         text = text_player_one if self.player == PlayerEnum.FIRST else text_player_two
-        line_size = self.small_font.size(text.split("\n")[0])[1]
+        line_size = self.small_font.size(text.split("\n")[0])[1] + 10
         y = line_size
         for line in text.split("\n"):
             text_surface = self.small_font.render(line, True, Color.WHITE.value, Color.BLACK.value)
@@ -257,9 +257,27 @@ class GameCycle:
 
                 post_events()
 
+        delete_m = []
+        delete_b = []
         for meteor in self.meteors.sprites():
             if self.rocket.intersect(meteor):
                 post_event(self.session_id, EventCode.EVT_GMOVER.value)
+            for bullet in self.bullet_group.sprites():
+                if isinstance(bullet, Bullet) and bullet.intersect(meteor):
+                    delete_m.append(meteor)
+                    delete_b.append(bullet)
+                    if isinstance(meteor, Meteor):
+                        meteor.blow()
+                    play_sound("explosion.wav")
+
+        self.bullet_group.remove(delete_b)
+
+        @threaded.threaded
+        def delete_meteor():
+            time.sleep(1)
+            self.meteors.remove(delete_m)
+
+        delete_meteor()
 
     def process_enter_events(self, events):
         pygame_widgets.update(events)
