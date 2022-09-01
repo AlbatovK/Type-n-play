@@ -1,4 +1,4 @@
-from game_cycle.game_cycle import GameCycle
+from game.game_cycle import GameCycle
 from util.api_service import init_api_service
 
 if __name__ == "__main__":

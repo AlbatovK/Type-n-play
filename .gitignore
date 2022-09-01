@@ -1,5 +1,9 @@
 /venv/
 __pycache__
-*.txt
-**/.idea/
 .idea/
+
+*.spec
+build/
+build
+dist/
+dist

@@ -1,69 +1,79 @@
-from threading import Thread
-from typing import Any
+from typing import List
 
 import pygame.sprite
 from pygame import Rect
+from pygame.event import Event
+from pygame.font import Font
+from pygame.surface import Surface
 
 from util.api_service import get_random_words
 from util.asset_manager import play_sound, load_image
+from util.threaded import threaded
 
 
 class TypingEngine(pygame.sprite.Sprite):
 
-    def __init__(self, x_pos, y_pos, width, height) -> None:
+    def __init__(self, x_pos: int, y_pos: int, width: int, height: int):
         super().__init__()
-        self.rect = Rect(x_pos, y_pos, width, height)
-        self.words = ""
-        self.written = ""
-        self.image = pygame.transform.scale(load_image("text_back.png"), self.rect.size)
+
+        self.rect: Rect = Rect(x_pos, y_pos, width, height)
+        self.image: Surface = pygame.transform.scale(load_image("text_back.png"), self.rect.size)
+
+        self.words, self.written = "", ""
         self.load_words()
 
-    def load_words(self):
-        def load():
-            self.words = get_random_words(10)
+    @threaded
+    def load_words(self) -> None:
+        self.words = get_random_words(10)
+        self.written = ""
 
-        Thread(target=load, daemon=True).start()
+    def update(self, events: List[Event]) -> None:
 
-    def update(self, events: Any) -> None:
         for event in events:
             if event.type == pygame.KEYDOWN:
-                if len(self.written) == len(self.words):
-                    self.words, self.written = get_random_words(10), ""
                 if event.unicode == self.words[len(self.written)]:
                     self.written += event.unicode
                 else:
                     play_sound("error.wav")
+
                 if self.written == self.words:
                     text_done_event = pygame.event.Event(pygame.USEREVENT)
                     pygame.event.post(text_done_event)
 
-    def draw(self, screen: pygame.Surface, font, color, written_color):
+    def draw(self, screen: Surface, font: Font, color, written_color) -> None:
 
-        screen.blit(self.image, (self.rect.x, self.rect.y))
+        screen.blit(self.image, self.rect.topleft)
 
-        def blit_text(surface, text, pos, _color):
+        def blit_multiline_text(surface: Surface, text: str, pos, _color) -> None:
 
             words = [word.split(' ') for word in text.splitlines()]
             space = font.size(' ')[0]
-            max_width, max_height = surface.get_size()
+
+            (max_width, max_height), word_height = surface.get_size(), 0
             max_width -= 40
             max_height -= 40
+
+            offset_x, offset_y = 50, 40
             x, y = pos
-            x += 50
-            y += 40
-            word_height = 0
+            x += offset_x
+            y += offset_y
+
             for line in words:
                 for word in line:
+
                     word_surface = font.render(word, 0, _color)
                     word_width, word_height = word_surface.get_size()
                     word_height += 10
+
                     if x + word_width >= max_width:
-                        x = pos[0] + 50
+                        x = pos[0] + offset_x
                         y += word_height
+
                     surface.blit(word_surface, (x, y))
                     x += word_width + space
-                x = pos[0] + 50
+
+                x = pos[0] + offset_x
                 y += word_height
 
-        blit_text(screen, self.words, (self.rect.x, self.rect.y), color)
-        blit_text(screen, self.written, (self.rect.x, self.rect.y), written_color)
+        blit_multiline_text(screen, self.words, (self.rect.x, self.rect.y), color)
+        blit_multiline_text(screen, self.written, (self.rect.x, self.rect.y), written_color)
