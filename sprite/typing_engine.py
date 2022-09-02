@@ -28,6 +28,7 @@ class TypingEngine(pygame.sprite.Sprite):
         self.words = get_random_words(self.word_count)
         self.written = ""
 
+    @threaded
     def update(self, events: List[Event]) -> None:
 
         for event in events:
@@ -39,7 +40,8 @@ class TypingEngine(pygame.sprite.Sprite):
                     if self.written == self.words:
                         text_done_event = pygame.event.Event(pygame.USEREVENT)
                         pygame.event.post(text_done_event)
-                        return
+                        self.load_words()
+
                 else:
                     play_sound("error.wav")
 
@@ -56,7 +58,7 @@ class TypingEngine(pygame.sprite.Sprite):
             max_width -= 40
             max_height -= 40
 
-            offset_x, offset_y = 50, 40
+            offset_x, offset_y = 60, 70
             x, y = pos
             x += offset_x
             y += offset_y
@@ -65,7 +67,7 @@ class TypingEngine(pygame.sprite.Sprite):
                 for word in line:
 
                     word_surface = font.render(word, 0, _color)
-                    word_width, word_height = word_surface.get_size()[0], 40
+                    word_width, word_height = word_surface.get_size()[0], 50
 
                     if x + word_width >= max_width:
                         x = pos[0] + offset_x

@@ -4,6 +4,7 @@ import time
 import pygame as pg
 import pygame_widgets
 from pygame.font import Font
+from pygame.rect import Rect
 from pygame_textinput import pygame_textinput, TextInputManager
 from pygame_widgets.button import ButtonArray, Button
 
@@ -11,6 +12,7 @@ from game.color import Color
 from game.event_code import EventCode
 from game.game_state import GameState
 from game.player import PlayerEnum
+from sprite.background import Background
 from sprite.bullet import Bullet
 from sprite.meteor import Meteor
 from sprite.rocket import Rocket
@@ -25,7 +27,7 @@ class GameCycle:
     running = False
     wnd_size, fps = (720, 640), 60
     cur_state = GameState.ST_ENTER
-    word_count = 5
+    word_count = 7
     intro_dlt = 10
 
     session_id = None
@@ -44,6 +46,7 @@ class GameCycle:
     rocket = Rocket(110, 450, 100, 150)
     bullet_group = pg.sprite.Group()
     meteors = pg.sprite.Group()
+    game_bgs = pg.sprite.Group()
     typing_engine = TypingEngine(320, 0, 400, 640, word_count)
 
     textinput = pygame_textinput.TextInputVisualizer(
@@ -81,13 +84,17 @@ class GameCycle:
             onClicks=(enter_wait_state, enter_input_state, exit_game)
         )
 
+        back_last = Background(0, -640, 320, 640, 2)
+        back_first = Background(0, 0, 320, 640, 2)
+        self.game_bgs.add(back_first, back_last)
+
     def __init__(self):
         pg.init()
         pg.font.init()
         pg.mixer.init()
 
         pg.display.set_caption("Type'n'play")
-        pg.display.set_icon(load_image("icon.jpg"))
+        pg.display.set_icon(load_image("icon.png"))
         self.screen = pg.display.set_mode(self.wnd_size)
         self.clock = pg.time.Clock()
 
@@ -216,13 +223,14 @@ class GameCycle:
 
     def render_game_state(self):
         self.screen.fill(Color.BLACK.value)
+        self.game_bgs.draw(self.screen)
         self.bullet_group.draw(self.screen)
         self.rocket.draw(self.screen)
         self.meteors.draw(self.screen)
-        countdown_y = self.small_font.size(str(self.count))[1]
-        text_surface = self.small_font.render(str(self.count), True, Color.WHITE.value, Color.BLACK.value)
-        self.screen.blit(text_surface, (20, 620 - countdown_y))
-        self.typing_engine.draw(self.screen, self.small_font, Color.WHITE.value, Color.GRAY.value)
+        self.typing_engine.draw(self.screen, self.small_font, Color.WHITE.value, Color.BLACK.value)
+        countdown_x, countdown_y = self.medium_font.size(str(self.count))
+        text_surface = self.medium_font.render(str(self.count), True, Color.WHITE.value)
+        self.screen.blit(text_surface, (520 - countdown_x // 2, 640 - countdown_y - 90))
 
     def render(self):
         if self.cur_state == GameState.ST_ENTER:
@@ -286,10 +294,10 @@ class GameCycle:
         self.meteors.update()
         self.bullet_group.update()
         self.typing_engine.update(events)
+        self.game_bgs.update()
 
         for event in events:
             if event.type == pg.USEREVENT:
-                self.typing_engine.load_words()
 
                 @threaded.threaded
                 def post_events():
