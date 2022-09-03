@@ -4,6 +4,8 @@ import requests
 from requests import Response
 
 base_server_url: str = None
+session = requests.Session()
+words_session = requests.Session()
 
 word_api_url: str = "https://random-word-api.herokuapp.com/word"
 
@@ -22,7 +24,7 @@ def init_api_service(base: str) -> None:
 
 @api_operation
 def get_api_request(url: str, params: dict = None) -> Response:
-    return requests.get(url=url, params=params)
+    return session.get(url=url, params=params)
 
 
 def create_session() -> int:
@@ -46,5 +48,5 @@ def post_event(session_id: int, event_code) -> None:
 
 def get_random_words(count: int) -> str:
     params: dict = {'number': count}
-    word_list: List[str] = requests.get(url=word_api_url, params=params).json()
+    word_list: List[str] = words_session.get(url=word_api_url, params=params).json()
     return ' '.join(word_list)

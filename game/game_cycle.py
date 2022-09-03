@@ -4,7 +4,6 @@ import time
 import pygame as pg
 import pygame_widgets
 from pygame.font import Font
-from pygame.rect import Rect
 from pygame_textinput import pygame_textinput, TextInputManager
 from pygame_widgets.button import ButtonArray, Button
 
@@ -27,7 +26,7 @@ class GameCycle:
     running = False
     wnd_size, fps = (720, 640), 60
     cur_state = GameState.ST_ENTER
-    word_count = 7
+    word_count = 5
     intro_dlt = 10
 
     session_id = None
@@ -257,16 +256,18 @@ class GameCycle:
 
         for event in events:
             if event.type == pg.KEYDOWN:
-                self.session_id = None
-                self.player = None
-                self.count = None
-
                 self.bullet_group = pg.sprite.Group()
+                self.meteors = pg.sprite.Group()
                 self.cur_state = pg.sprite.Group()
                 self.rocket = Rocket(110, 450, 100, 150)
                 self.typing_engine.load_words()
 
                 self.cur_state = GameState.ST_ENTER
+
+                self.session_id = None
+                self.player = None
+                self.count = None
+
                 play_sound("select.wav")
 
     def process_input_events(self, events):
@@ -317,7 +318,7 @@ class GameCycle:
 
                 @threaded.threaded
                 def end_game():
-                    time.sleep(0.5)
+                    time.sleep(1)
                     post_event(self.session_id, EventCode.EVT_GMOVER.value)
 
                 end_game()
@@ -337,7 +338,8 @@ class GameCycle:
             time.sleep(1)
             self.meteors.remove(delete_m)
 
-        delete_meteor()
+        if len(delete_m):
+            delete_meteor()
 
     def process_enter_events(self, events):
         pygame_widgets.update(events)

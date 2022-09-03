@@ -28,7 +28,6 @@ class TypingEngine(pygame.sprite.Sprite):
         self.words = get_random_words(self.word_count)
         self.written = ""
 
-    @threaded
     def update(self, events: List[Event]) -> None:
 
         for event in events:

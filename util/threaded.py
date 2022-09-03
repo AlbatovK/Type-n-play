@@ -4,16 +4,17 @@ from threading import Thread
 from game import game_cycle
 
 
-def cycled_factory(interval: int, cycle: game_cycle):
+def cycled_factory(cycle: game_cycle):
     def cycled(func: callable) -> callable:
         def wrapper(*args, **kwargs) -> None:
+            @threaded
             def do_cycle(*_args, **_kwargs) -> None:
                 while cycle.running:
+                    start = time.time()
                     func(*_args, **_kwargs)
-                    if interval > 0.5:
-                        time.sleep(interval)
+                    print(time.time() - start, func.__name__)
 
-            Thread(target=do_cycle, args=args, kwargs=kwargs, daemon=True).start()
+            do_cycle(*args, **kwargs)
 
         return wrapper
 
@@ -22,6 +23,11 @@ def cycled_factory(interval: int, cycle: game_cycle):
 
 def threaded(func: callable) -> callable:
     def wrapper(*args, **kwargs) -> None:
-        Thread(target=func, args=args, kwargs=kwargs, daemon=True).start()
+        def timed(*_args, **_kwargs):
+            start = time.time()
+            func(*_args, **_kwargs)
+            print(time.time() - start, func.__name__)
+
+        Thread(target=timed, args=args, kwargs=kwargs, daemon=True).start()
 
     return wrapper
