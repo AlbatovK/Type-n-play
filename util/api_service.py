@@ -2,12 +2,15 @@ from typing import List
 
 import requests
 from requests import Response
+from requests import adapters
 
 base_server_url: str = None
+word_api_url: str = "https://random-word-api.herokuapp.com/word"
+
+adapter = adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
+
 session = requests.Session()
 words_session = requests.Session()
-
-word_api_url: str = "https://random-word-api.herokuapp.com/word"
 
 
 def api_operation(func: callable) -> callable:

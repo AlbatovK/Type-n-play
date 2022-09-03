@@ -8,7 +8,7 @@ from util.asset_manager import load_image
 
 class Bullet(Sprite):
     image: pygame.Surface = load_image('bullet.png')
-    velocity = -5
+    velocity = -10
 
     def __init__(self, x_pos: int, y_pos: int, width: int, height: int, velocity: int, group=pygame.sprite.Group()):
         self.rect: Rect = Rect(x_pos, y_pos, width, height)

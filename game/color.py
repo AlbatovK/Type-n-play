@@ -1,7 +1,5 @@
 from enum import Enum
 
-import pygame
-
 
 class Color(Enum):
     BLACK = (0, 0, 0)
@@ -10,4 +8,3 @@ class Color(Enum):
     GREEN = (0, 255, 0)
     BLUE = (0, 0, 255)
     GRAY = (128, 128, 128)
-    TRANSPARENT = pygame.color.Color(0, 0, 0, a=0)

@@ -127,8 +127,7 @@ class GameCycle:
 
         try:
             event = get_last_event(self.session_id)
-            print(event)
-            if event['posId'] == self.last_event_id:
+            if event['posId'] <= self.last_event_id:
                 return
             self.last_event_id = event['posId']
 
@@ -137,7 +136,7 @@ class GameCycle:
                 if event['eventCode'] == EventCode.EVT_METSPWN.value:
                     Meteor(x_pos=110, y_pos=-100, width=100, height=100, velocity=2, group=self.meteors)
                 elif event['eventCode'] == EventCode.EVT_METDESTR.value:
-                    Bullet(x_pos=145, y_pos=500, width=30, height=60, velocity=-5, group=self.bullet_group)
+                    Bullet(x_pos=145, y_pos=500, width=30, height=60, velocity=-10, group=self.bullet_group)
                     play_sound("laser.wav")
                 elif event['eventCode'] == EventCode.EVT_GMOVER.value:
                     play_sound("blip.wav")
@@ -158,7 +157,7 @@ class GameCycle:
 
         self.running = True
 
-        @threaded.cycled_factory(0.1, self)
+        @threaded.cycled_factory(self)
         def event_pool():
             self.process_event_pool()
 
@@ -299,7 +298,6 @@ class GameCycle:
 
         for event in events:
             if event.type == pg.USEREVENT:
-
                 @threaded.threaded
                 def post_events():
                     code = EventCode.EVT_METSPWN if self.player == PlayerEnum.FIRST else EventCode.EVT_METDESTR
