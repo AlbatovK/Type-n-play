@@ -127,7 +127,7 @@ class GameCycle:
 
         try:
             event = get_last_event(self.session_id)
-            if event['posId'] <= self.last_event_id:
+            if event['posId'] == self.last_event_id:
                 return
             self.last_event_id = event['posId']
 

@@ -5,8 +5,8 @@ intro_player_one = "You are alien species whose main\ngoal is to stop anything\n
                    "unlucky space explorer\nby executing terminal code. You\nhave 120 seconds to\n" \
                    "eliminate intruder."
 
-intro_player_two = "You are lonely space explorer that\nwas caught in meteor storm\nlasting for 120 seconds.\nYou must " \
-                   "avoid\nhitting rocks by\ntyping commands in order\nfor your ship to shoot them."
+intro_player_two = "You are lonely space explorer that\nwas caught in meteor storm\nlasting for 120 seconds.\n" \
+                   "You must avoid\nhitting rocks by\ntyping commands in order\nfor your ship to shoot them."
 
 outro_player_two_won = "You were able to successfully\ntransfer meteors and\nreach safety\nYou won!"
 
