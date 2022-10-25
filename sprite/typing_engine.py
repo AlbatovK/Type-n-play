@@ -33,7 +33,7 @@ class TypingEngine(pygame.sprite.Sprite):
         for event in events:
             if event.type == pygame.KEYDOWN:
 
-                if event.unicode == self.words[len(self.written)]:
+                if len(self.written) < len(self.words) and event.unicode == self.words[len(self.written)]:
                     self.written += event.unicode
 
                     if self.written == self.words:
