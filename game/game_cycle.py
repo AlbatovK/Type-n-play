@@ -35,6 +35,7 @@ class GameCycle:
     won = None
     count = None
     buttons = None
+    last_tick_ms = None
     cur_btn = 0
 
     small_font: Font = load_font("GangSmallYuxian.ttf", 35)
@@ -134,7 +135,7 @@ class GameCycle:
             if self.cur_state == GameState.ST_GAME:
 
                 if event['eventCode'] == EventCode.EVT_METSPWN.value:
-                    Meteor(x_pos=110, y_pos=-100, width=100, height=100, velocity=2, group=self.meteors)
+                    Meteor(x_pos=110, y_pos=-160, width=100, height=150, velocity=3, group=self.meteors)
                 elif event['eventCode'] == EventCode.EVT_METDESTR.value:
                     Bullet(x_pos=145, y_pos=500, width=30, height=60, velocity=-10, group=self.bullet_group)
                     play_sound("laser.wav")
@@ -164,7 +165,7 @@ class GameCycle:
         event_pool()
 
         while self.running:
-            self.clock.tick(self.fps)
+            self.last_tick_ms = self.clock.tick(self.fps)
             self.render()
             self.process_events()
 
@@ -223,9 +224,9 @@ class GameCycle:
         self.screen.fill(Color.BLACK.value)
         self.game_bgs.draw(self.screen)
         self.bullet_group.draw(self.screen)
-        self.rocket.draw(self.screen)
+        self.rocket.draw(self.screen, self.last_tick_ms)
         self.meteors.draw(self.screen)
-        self.typing_engine.draw(self.screen, self.small_font, Color.WHITE.value, Color.BLACK.value)
+        self.typing_engine.draw(self.last_tick_ms, self.screen, self.small_font, Color.WHITE.value, Color.BLACK.value)
         countdown_x, countdown_y = self.medium_font.size(str(self.count))
         text_surface = self.medium_font.render(str(self.count), True, Color.WHITE.value)
         self.screen.blit(text_surface, (520 - countdown_x // 2, 640 - countdown_y - 90))
@@ -290,8 +291,8 @@ class GameCycle:
                     enter_session_by_id()
 
     def process_game_events(self, events):
-        self.rocket.update(events)
-        self.meteors.update()
+        self.rocket.update(events, self.last_tick_ms)
+        self.meteors.update(self.last_tick_ms)
         self.bullet_group.update()
         self.typing_engine.update(events)
         self.game_bgs.update()

@@ -17,7 +17,13 @@ class TypingEngine(pygame.sprite.Sprite):
         super().__init__()
 
         self.rect: Rect = Rect(x_pos, y_pos, width, height)
-        self.image: Surface = pygame.transform.scale(load_image("text_back.png"), self.rect.size)
+        self.from_last_frame = 0
+        self.images = [
+            pygame.transform.scale(load_image("text_back.png"), self.rect.size),
+            pygame.transform.scale(load_image("text_back_active.png"), self.rect.size)
+        ]
+        self.image: Surface = self.images[0]
+        self.last_frame = 0
 
         self.word_count = word_count
         self.words, self.written = "", ""
@@ -44,7 +50,14 @@ class TypingEngine(pygame.sprite.Sprite):
                 else:
                     play_sound("error.wav")
 
-    def draw(self, screen: Surface, font: Font, color, written_color) -> None:
+    def draw(self, ms, screen: Surface, font: Font, color, written_color) -> None:
+
+        self.from_last_frame += ms
+
+        if self.from_last_frame > 800:
+            self.last_frame = (self.last_frame + 1) % len(self.images)
+            self.image = self.images[self.last_frame]
+            self.from_last_frame = 0
 
         screen.blit(self.image, self.rect.topleft)
 
