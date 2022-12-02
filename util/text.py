@@ -1,4 +1,6 @@
-from util.asset_manager import play_sound
+import random
+
+from util.asset_manager import play_sound, parse_file
 
 intro_player_one = "You are alien species whose main\ngoal is to stop anything\n" \
                    "from approaching your home\nplanet. Use your technologies to\npull meteors towards\n" \
@@ -22,3 +24,16 @@ outro_player_one_lost = "You missed several times\nand secrets of your home worl
 def validate(text: str):
     play_sound("select.wav")
     return (text.isdigit() and len(text) <= 6) or not text
+
+
+words = []
+
+
+def load_words():
+    global words
+    words = parse_file("words.json")["data"]
+
+
+def get_random_words(n):
+    global words
+    return random.sample(words, n)

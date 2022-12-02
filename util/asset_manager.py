@@ -1,3 +1,4 @@
+import json
 import os
 from os import path
 
@@ -29,3 +30,12 @@ def load_image(filename: str) -> Surface:
         raise Exception(f"No such image found: {file_path}")
 
     return pg.image.load(file_path)
+
+
+def parse_file(filename: str) -> dict:
+    file_path = os.path.join('assets', filename)
+    if not path.isfile(file_path):
+        raise Exception(f"No such file found: {file_path}")
+
+    with open(file_path, "r") as f:
+        return json.load(f)

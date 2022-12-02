@@ -1,11 +1,8 @@
-from typing import List
-
 import requests
 from requests import Response
 from requests import adapters
 
 base_server_url: str = None
-word_api_url: str = "https://random-word-api.herokuapp.com/word"
 
 adapter = adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
 
@@ -47,9 +44,3 @@ def get_last_event(session_id: int) -> dict:
 def post_event(session_id: int, event_code) -> None:
     params: dict = {"session_id": session_id, "event_code": event_code}
     get_api_request(url="session/event/post", params=params)
-
-
-def get_random_words(count: int) -> str:
-    params: dict = {'number': count}
-    word_list: List[str] = words_session.get(url=word_api_url, params=params).json()
-    return ' '.join(word_list)

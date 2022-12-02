@@ -26,7 +26,7 @@ class GameCycle:
     running = False
     wnd_size, fps = (720, 640), 60
     cur_state = GameState.ST_ENTER
-    word_count = 5
+    word_count = 7
     intro_dlt = 10
 
     session_id = None
@@ -116,6 +116,7 @@ class GameCycle:
                 self.won = PlayerEnum.SECOND
             post_event(self.session_id, EventCode.EVT_GMOVER.value)
 
+        self.typing_engine.load_words()
         time.sleep(self.intro_dlt)
         self.cur_state = GameState.ST_GAME
         play_sound("blip.wav")

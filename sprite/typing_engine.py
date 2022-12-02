@@ -6,8 +6,8 @@ from pygame.event import Event
 from pygame.font import Font
 from pygame.surface import Surface
 
-from util.api_service import get_random_words
 from util.asset_manager import play_sound, load_image
+from util.text import get_random_words
 from util.threaded import threaded
 
 
@@ -27,11 +27,10 @@ class TypingEngine(pygame.sprite.Sprite):
 
         self.word_count = word_count
         self.words, self.written = "", ""
-        self.load_words()
 
     @threaded
     def load_words(self) -> None:
-        self.words = get_random_words(self.word_count)
+        self.words = ' '.join(get_random_words(self.word_count))
         self.written = ""
 
     def update(self, events: List[Event]) -> None:
